@@ -2,9 +2,10 @@
 $array = explode(',', $_GET['array']);
 
 // 修正はここから
-for ($i = 0; $i < count($array); $i++) {
+$length = count($array);
+for ($i = 0; $i < $length; $i++) {
     $min = $i;
-    for($j=$i+1; $j<count($array); $j++) {
+    for($j = $i + 1; $j < $length; $j++) {
         if ($array[$min] > $array[$j]) {
             $min = $j;
         }
