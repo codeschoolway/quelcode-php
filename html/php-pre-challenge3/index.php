@@ -13,7 +13,9 @@ $dbpassword = 'test';
 try {
     $db = new PDO ($dsn, $dbuser, $dbpassword);
 } catch (PDOException $e) {
-    echo 'DB接続エラー： ' . $e->getMessage();
+    http_response_code(500);
+    echo json_encode('DB接続エラー： ' . $e->getMessage(), JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 $sth = $db->query('SELECT value FROM prechallenge3');
