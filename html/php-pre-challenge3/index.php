@@ -40,7 +40,7 @@ foreach ($aryAllCombinations as $aryCombination) {
     }
 }
 if (is_null($aryResultCombinations)) {
-    $aryResultCombinations[[]];
+    $aryResultCombinations = [[]];
 }
 
 echo json_encode($aryResultCombinations, JSON_NUMERIC_CHECK);
