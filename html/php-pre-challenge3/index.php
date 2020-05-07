@@ -1,6 +1,6 @@
 <?php
 $limit = $_GET['target'];
-if (is_string($limit) == false || $limit < 1 || preg_match('/^([1-9]\d*|0)\.(\d+)?$/', $limit) ) {
+if (is_string($limit) === false || $limit < 1 || preg_match('/^([1-9]\d*|0)\.(\d+)?$/', $limit) ) {
     header('HTTP/1.1 400 Bad Request');
     echo json_encode('invalid limit : ' . $limit);
     exit;
