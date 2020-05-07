@@ -42,5 +42,5 @@ if (is_null($aryResultCombinations)) {
     $aryResultCombinations[[]];
 }
 
-json_encode($aryResultCombinations, JSON_NUMERIC_CHECK);
+echo json_encode($aryResultCombinations, JSON_NUMERIC_CHECK);
 ?>
