@@ -39,7 +39,7 @@ foreach ($aryAllCombinations as $aryCombination) {
     }
 }
 if (is_null($aryResultCombinations)) {
-    $aryResultCombinations[] = json_encode(array());
+    $aryResultCombinations[[]];
 }
 
 json_encode($aryResultCombinations, JSON_NUMERIC_CHECK);
