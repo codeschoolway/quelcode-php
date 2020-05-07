@@ -18,7 +18,8 @@ try {
     exit;
 }
 
-$sth = $db->query('SELECT value FROM prechallenge3');
+$sth = $db->prepare('SELECT value FROM prechallenge3 WHERE value <= ? ORDER BY value');
+$sth->execute(array($limit));
 $aryDBNums = $sth->fetchAll(PDO::FETCH_COLUMN, 0);
 
 function makeCombinations($aryNums) {
