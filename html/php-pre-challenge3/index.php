@@ -39,9 +39,5 @@ if (is_null($aryResultCombinations)) {
     $aryResultCombinations[] = json_encode(array());
 }
 
-$theCombination = json_encode($aryResultCombinations, JSON_NUMERIC_CHECK);
-
-echo "<pre>";
-print_r($theCombination);
-echo "</pre>";
+json_encode($aryResultCombinations, JSON_NUMERIC_CHECK);
 ?>
