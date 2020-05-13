@@ -12,10 +12,20 @@ CREATE TABLE `members` (
 CREATE TABLE `posts` (
       `id` int(11) NOT NULL AUTO_INCREMENT,
       `message` text NOT NULL,
+      `count_retweeted` int(10) UNSIGNED NOT NULL,
+      `count_like` int(10) UNSIGNED NOT NULL,
       `member_id` int(11) NOT NULL,
       `reply_post_id` int(11) NOT NULL,
       `created` datetime NOT NULL,
       `modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
+
+CREATE TABLE `likes` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `member_id` int(11) NOT NULL,
+      `post_id` int(11) NOT NULL,
+      `is_like` bit(1) NOT NULL DEFAULT b'0',
       PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
