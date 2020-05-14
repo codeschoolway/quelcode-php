@@ -113,6 +113,15 @@ function updateTables($request, $table, $isStatus, $countStatus) {
 	));
 	$allLikes = $checkLikes->fetch();
 
+	if ($allLikes === false) {
+		// $allLikesがfalseならログイン中のユーザーのmember_idを使って該当テーブルに新規で列を作る
+		$likeData = $db->prepare('INSERT INTO ' . $table . ' SET member_id=?, post_id=?');
+		$likeData->execute(array(
+			$_SESSION['id'],
+			$request
+		));
+	}
+	
 	$add = 1;
 	$add = ($allLikes[''.$isStatus.''] === '0' ? $add : (- ($add)));
 	$currentLike = ($allLikes[''.$isStatus.''] === '0' ? true : false);
@@ -123,9 +132,10 @@ function updateTables($request, $table, $isStatus, $countStatus) {
 		$request
 	));
 
-	$updateLikes = $db->prepare('UPDATE ' . $table . ' SET ' . $isStatus . ' = ? WHERE post_id = ?');
+	$updateLikes = $db->prepare('UPDATE ' . $table . ' SET ' . $isStatus . ' = ? WHERE member_id=? and post_id = ?');
 	$updateLikes->execute(array(
 		$currentLike,
+		$_SESSION['id'],
 		$request
 	));
 
@@ -192,6 +202,22 @@ function updateCountRetweet($id) {
 	}
 }
 
+function checkIsRetweeted($postId) {
+	require('dbconnect.php');
+
+	$checkTweeted = $db->prepare('SELECT is_tweet from tweets WHERE member_id = ? and post_id = ?');
+	$checkTweeted->execute(array(
+		$_SESSION['id'],
+		$postId
+	));
+	$isTweeted = $checkTweeted->fetch();
+	if (!($isTweeted['is_tweet'])) {
+		return false;
+
+	}
+	return true;
+}
+
 // htmlspecialcharsのショートカット
 function h($value) {
 	return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -239,35 +265,29 @@ function makeLink($value) {
 					<p><?php echo makeLink(h($post['message'])); ?><span class="name">（<?php echo h($post['name']); ?>）</span>
 					[<a href="index.php?res=<?php echo h($post['id']); ?>">Re</a>]
 
-					<!-- ****** リツイートボタン ****** -->
-					<?php if (($_SESSION['id'] == $post['member_id'])): ?>
-						<?php if (($post['count_retweeted'] > 0) ): ?>
-						<a href="index.php?retweeted=<?php echo h($post['id']); ?>"style="color: #16BF63;"><i class="fas fa-retweet"></i></a>
+						<?php if(checkIsRetweeted($post['id'])): ?>	
+							<a href="index.php?retweeted=<?php echo h($post['id']); ?>"style="color: #16BF63;"><i class="fas fa-retweet"></i></a>
 						<?php else: ?>
 						<!-- リツイート可能 -->
-						<a href="index.php?retweeted=<?php echo h($post['id']); ?>" style="color: #828181"><i class="fas fa-retweet"></i></a>
+							<a href="index.php?retweeted=<?php echo h($post['id']); ?>" style="color: #828181"><i class="fas fa-retweet"></i></a>
 						<?php endif; ?>
 
 						<?php if ($post['count_retweeted'] > 0): ?>
-						<?php echo $post['count_retweeted']; ?>
+							<?php echo $post['count_retweeted']; ?>
 						<?php endif;?>
-					<?php endif;?>
 					<!-- / ****** リツイートボタン ****** -->
 
 					<!-- ****** いいねボタン ****** -->
-					<?php if (($_SESSION['id'] == $post['member_id'])): ?>
 						<?php $likeStatus = checkIsLikeStatus($post['id']); ?>
 						<?php if (($likeStatus['is_like'] !== '0')  && ($post['count_like'] > 0) ): ?>
-						<a href="index.php?like=<?php echo h($post['id']); ?>" style="color: red"><i class="fas fa-heart"></i></a>
+							<a href="index.php?like=<?php echo h($post['id']); ?>" style="color: red"><i class="fas fa-heart"></i></a>
 						<?php else: ?>
-						<a href="index.php?like=<?php echo h($post['id']); ?>" style="color: #828181"><i class="fas fa-heart"></i></a>
+							<a href="index.php?like=<?php echo h($post['id']); ?>" style="color: #828181"><i class="fas fa-heart"></i></a>
 						<? endif; ?>
 
 						<?php if ($post['count_like'] > 0): ?>
-						<?php echo $post['count_like']; ?>
+							<?php echo $post['count_like']; ?>
 						<?php endif;?>
-					<?php endif;?>
-					<!-- / ****** いいねボタン ****** -->
 					</p>
 
 					<p class="day"><a href="view.php?id=<?php echo h($post['id']); ?>"><?php echo h($post['created']); ?></a>
