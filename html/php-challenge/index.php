@@ -24,11 +24,24 @@ if (!empty($_POST)) {
 			$_POST['reply_post_id']
 		));
 
-		// **** 各投稿に対応したテーブルlikesの列を作る
 		$getId = $db->prepare('SELECT LAST_INSERT_ID()');
 		$getId->execute(array());
 		$theId = $getId->fetch();
 		
+		$postTwData = $db->prepare('SELECT * FROM posts WHERE id = ?');
+		$postTwData->execute(array(
+			$theId['LAST_INSERT_ID()']
+		));
+		$theTwData = $postTwData->fetch();
+
+		$likeTwData = $db->prepare('INSERT INTO tweets SET member_id=?, post_id=?');
+		$likeTwData->execute(array(
+			$theTwData['member_id'],
+			$theTwData['id']
+		));
+		// /**** 各投稿に対応したテーブルtweetsの列を作る
+
+		// **** 各投稿に対応したテーブルlikesの列を作る
 		$postData = $db->prepare('SELECT * FROM posts WHERE id = ?');
 		$postData->execute(array(
 			$theId['LAST_INSERT_ID()']
@@ -41,14 +54,6 @@ if (!empty($_POST)) {
 			$theData['id']
 		));
 		// /**** 各投稿に対応したテーブルlikesの列を作る
-		
-		// リツイートなら１増やす
-		if (!empty($_POST['reply_post_id'])) {
-			$update = $db->prepare('UPDATE posts SET count_retweeted = count_retweeted + 1 WHERE id = ?');
-			$update->execute(array(
-				$_POST['reply_post_id']
-			));
-		}
 		
 		header('Location: index.php'); exit();
 	}
@@ -84,33 +89,54 @@ if (isset($_REQUEST['res'])) {
 	$message = '@' . $table['name'] . ' ' . $table['message'];
 }
 
+// **** リツイートボタン ***********
+if (isset($_REQUEST['retweeted'])) {
+	updateTables($_REQUEST['retweeted'], 'tweets', 'is_tweet', 'count_retweeted');
+}
+// /**** リツイートボタン ***********
+
+
 // **** いいねボタン ******
 if (isset($_REQUEST['like'])) {
-	$checkLikes = $db->prepare('SELECT * FROM likes WHERE post_id = ?');
+	updateTables($_REQUEST['like'], 'likes', 'is_like', 'count_like');
+}
+// /**** いいねボタン ******
+
+
+// *** いいねとリツイートの更新 *******
+function updateTables($request, $table, $isStatus, $countStatus) {
+	require('dbconnect.php');
+	
+	$checkLikes = $db->prepare('SELECT * FROM ' . $table . ' WHERE member_id = ' . $_SESSION['id'] . ' and post_id = ?');
 	$checkLikes->execute(array(
-		$_REQUEST['like']
+		$request
 	));
 	$allLikes = $checkLikes->fetch();
 
 	$add = 1;
-	$add = ($allLikes['is_like'] === '0' ? $add : (- ($add)));
-	$currentLike = ($allLikes['is_like'] === '0' ? true : false);
+	$add = ($allLikes[''.$isStatus.''] === '0' ? $add : (- ($add)));
+	$currentLike = ($allLikes[''.$isStatus.''] === '0' ? true : false);
 
-	$update = $db->prepare('UPDATE posts SET count_like = count_like + ? WHERE id = ?');
+	$update = $db->prepare('UPDATE posts SET ' . $countStatus . ' = ' . $countStatus . ' + ? WHERE id = ?');
 	$update->execute(array(
 		$add,
-		$_REQUEST['like']
+		$request
 	));
 
-	$updateLikes = $db->prepare('UPDATE likes SET is_like = ? WHERE post_id = ?');
+	$updateLikes = $db->prepare('UPDATE ' . $table . ' SET ' . $isStatus . ' = ? WHERE post_id = ?');
 	$updateLikes->execute(array(
 		$currentLike,
-		$_REQUEST['like']
+		$request
 	));
-	
+
+	if ($table === 'tweets') {
+		updateCountRetweet($request);
+	}
+
 	header('Location: index.php'); exit();
 }
-// /****** いいねボタン ******
+// /*** いいねとリツイートの更新 *******
+
 
 // ****** いいねの状態を確認 ******
 function checkIsLikeStatus($postId) {
@@ -126,6 +152,45 @@ function checkIsLikeStatus($postId) {
 	return $isLike;
 }
 // /****** いいねの状態を確認 ******
+
+
+function updateCountRetweet($id) {
+	require('dbconnect.php');
+
+	$checkLikes = $db->prepare('SELECT reply_post_id FROM posts WHERE id = ?');
+	$checkLikes->execute(array(
+		$id
+	));
+	$allLikes = $checkLikes->fetch();
+
+	// postsのreply_post_id
+	$replyPostId = $allLikes['reply_post_id'];
+	// reply_post_idが0より大きいということはリツイートされている
+	if ($replyPostId > '0') {
+		$checkLikes = $db->prepare('SELECT * FROM tweets WHERE member_id = ' . $_SESSION['id'] . ' and post_id = ?');
+		$checkLikes->execute(array(
+			$_REQUEST['retweeted']
+		));
+		$allLikes = $checkLikes->fetch();
+
+		$add = 1;
+		$add = ($allLikes['is_tweet'] === '0' ? (- ($add)) : $add);
+		$currentLike = ($allLikes['is_tweet'] === '0' ? false : true);
+
+		$update = $db->prepare('UPDATE posts SET count_retweeted  = count_retweeted + ? WHERE id = ?');
+		$update->execute(array(
+			$add,
+			$replyPostId
+		));
+	
+		// 1か０のいずれかのみ挿入
+		$updateLikes = $db->prepare('UPDATE tweets SET is_tweet = ? WHERE member_id = ' . $_SESSION['id'] . ' and post_id = ?');
+		$updateLikes->execute(array(
+			$currentLike,
+			$replyPostId
+		));
+	}
+}
 
 // htmlspecialcharsのショートカット
 function h($value) {
@@ -169,39 +234,41 @@ function makeLink($value) {
 		</form>
 			<?php
 			foreach ($posts as $post): ?>
-				<!-- ?php echo "<pre>";
-				print_r($post); ?> -->
 				<div class="msg">
 					<img src="member_picture/<?php echo h($post['picture']); ?>" width="48" height="48" alt="<?php echo h($post['name']); ?>" />
 					<p><?php echo makeLink(h($post['message'])); ?><span class="name">（<?php echo h($post['name']); ?>）</span>
+					[<a href="index.php?res=<?php echo h($post['id']); ?>">Re</a>]
 
 					<!-- ****** リツイートボタン ****** -->
-					<?php if (($post['reply_post_id'] > 0) && ($_SESSION['id'] == $post['member_id'])): ?>
-					<!-- リツイート削除 -->
-					<a href="delete.php?id=<?php echo h($post['id']); ?>"style="color: #16BF63;"><i class="fas fa-retweet"></i></a>
-					<?php else: ?>
-					<!-- リツイート可能 -->
-					<a href="index.php?res=<?php echo h($post['id']); ?>" style="color: #828181"><i class="fas fa-retweet"></i></a>
-					<?php endif; ?>
+					<?php if (($_SESSION['id'] == $post['member_id'])): ?>
+						<?php if (($post['count_retweeted'] > 0) ): ?>
+						<a href="index.php?retweeted=<?php echo h($post['id']); ?>"style="color: #16BF63;"><i class="fas fa-retweet"></i></a>
+						<?php else: ?>
+						<!-- リツイート可能 -->
+						<a href="index.php?retweeted=<?php echo h($post['id']); ?>" style="color: #828181"><i class="fas fa-retweet"></i></a>
+						<?php endif; ?>
 
-					<?php if ($post['count_retweeted'] > 0): ?>
-					<?php echo $post['count_retweeted']; ?>
+						<?php if ($post['count_retweeted'] > 0): ?>
+						<?php echo $post['count_retweeted']; ?>
+						<?php endif;?>
 					<?php endif;?>
 					<!-- / ****** リツイートボタン ****** -->
 
 					<!-- ****** いいねボタン ****** -->
-					<?php $likeStatus = checkIsLikeStatus($post['id']); ?>
-					<?php if (($likeStatus['is_like'] !== '0')  && ($post['count_like'] > 0) ): ?>
-					<a href="index.php?like=<?php echo h($post['id']); ?>" style="color: red"><i class="fas fa-heart"></i></a>
-					<?php else: ?>
-					<a href="index.php?like=<?php echo h($post['id']); ?>" style="color: #828181"><i class="fas fa-heart"></i></a>
-					<? endif; ?>
+					<?php if (($_SESSION['id'] == $post['member_id'])): ?>
+						<?php $likeStatus = checkIsLikeStatus($post['id']); ?>
+						<?php if (($likeStatus['is_like'] !== '0')  && ($post['count_like'] > 0) ): ?>
+						<a href="index.php?like=<?php echo h($post['id']); ?>" style="color: red"><i class="fas fa-heart"></i></a>
+						<?php else: ?>
+						<a href="index.php?like=<?php echo h($post['id']); ?>" style="color: #828181"><i class="fas fa-heart"></i></a>
+						<? endif; ?>
 
-					<?php if ($post['count_like'] > 0): ?>
-					<?php echo $post['count_like']; ?>
+						<?php if ($post['count_like'] > 0): ?>
+						<?php echo $post['count_like']; ?>
+						<?php endif;?>
 					<?php endif;?>
-					</p>
 					<!-- / ****** いいねボタン ****** -->
+					</p>
 
 					<p class="day"><a href="view.php?id=<?php echo h($post['id']); ?>"><?php echo h($post['created']); ?></a>
 					<?php if ($post['reply_post_id'] > 0):?>
