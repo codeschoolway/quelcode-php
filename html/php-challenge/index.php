@@ -1,6 +1,6 @@
 <?php
 session_start();
-require('dbconnect.php');
+require_once('dbconnect.php');
 
 if (isset($_SESSION['id']) && $_SESSION['time'] + 3600 > time()) {
 	// ログインしている
@@ -105,7 +105,7 @@ if (isset($_REQUEST['like'])) {
 
 // *** いいねとリツイートの更新 *******
 function updateTables($request, $table, $isStatus, $countStatus) {
-	require('dbconnect.php');
+	global $db;
 	
 	$checkLikes = $db->prepare('SELECT * FROM ' . $table . ' WHERE member_id = ' . $_SESSION['id'] . ' and post_id = ?');
 	$checkLikes->execute(array(
@@ -150,7 +150,7 @@ function updateTables($request, $table, $isStatus, $countStatus) {
 
 // ****** いいねの状態を確認 ******
 function checkIsLikeStatus($postId) {
-	require('dbconnect.php');
+	global $db;
 
 	$status = $db->prepare('SELECT * FROM likes WHERE member_id = ? and post_id = ?');
 	$status->execute(array(
@@ -165,7 +165,7 @@ function checkIsLikeStatus($postId) {
 
 
 function updateCountRetweet($id) {
-	require('dbconnect.php');
+	global $db;
 
 	$checkLikes = $db->prepare('SELECT reply_post_id FROM posts WHERE id = ?');
 	$checkLikes->execute(array(
@@ -203,7 +203,7 @@ function updateCountRetweet($id) {
 }
 
 function checkIsRetweeted($postId) {
-	require('dbconnect.php');
+	global $db;
 
 	$checkTweeted = $db->prepare('SELECT is_tweet from tweets WHERE member_id = ? and post_id = ?');
 	$checkTweeted->execute(array(
