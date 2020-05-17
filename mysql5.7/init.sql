@@ -30,7 +30,7 @@ CREATE TABLE `likes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 CREATE TABLE `tweets` (
-      `id` int(11) NOT NULL,
+      `id` int(11) NOT NULL AUTO_INCREMENT,
       `member_id` int(11) NOT NULL,
       `post_id` int(11) NOT NULL,
       `is_tweet` bit(1) NOT NULL DEFAULT b'0',
