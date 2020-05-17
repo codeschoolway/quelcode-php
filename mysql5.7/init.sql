@@ -35,7 +35,7 @@ CREATE TABLE `tweets` (
       `post_id` int(11) NOT NULL,
       `is_tweet` bit(1) NOT NULL DEFAULT b'0',
       `origin_created` datetime NOT NULL,
-      `retweeted_created` datetime NOT NULL
+      `retweeted_created` datetime NOT NULL,
       PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
