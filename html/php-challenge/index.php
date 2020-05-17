@@ -133,76 +133,6 @@ function updateTables($request, $table, $isStatus, $countStatus) {
 		$request
 	));
 
-	// 消す /////////////
-	//$add = 1;/////////////////
-
-	// ******* tweetテーブルのデータの xxxxx_createdを変更
-	// $addが１ならリツイートされた
-	// $addが１ではないならリツイートが取り消された
-/* 	if ($add === 1) {
-		$dateCreated = date("Y-m-d H:i:s");
-		//$dateCreated = 'NOW()';
-		$eitherDate = 'retweeted';
-	} else {
-		$getCreated = $db->prepare('SELECT created FROM posts WHERE id = ?');
-		$getCreated->execute(array(
-			$request
-		));
-		//$ret = $getCreated->rowCount();
-		$created = $getCreated->fetch();
-		//var_dump($created['created']);
-		$dateCreated = $created['created'];
-		$eitherDate = 'origin';
-	} */
-
-
-
-
-
-	/* var_dump($dateCreated);
-	var_dump($eitherDate);
-	var_dump($request);
-	exit; */
-
-	/* $updateCreated = $db->prepare('UPDATE posts SET created = ' . $dateCreated . ' WHERE id = ?');
-	$updateCreated->execute(array(
-		$request
-	)); */
-	//print_r($updateCreated->errorInfo());
-
-/* 	$updateCreated = $db->prepare('UPDATE posts SET created=:created WHERE id=:id');
-	$updateCreated->bindParam(':created', $dateCreated);
-	$updateCreated->bindParam(':id', $request);
-	$updateCreated->execute(); */
-	
-	/* var_dump((int)$_SESSION['id']);
-	exit; */
-
-
-/* 	$memberId = (int)$_SESSION['id'];
-	// ******** tweetsテーブルのmember_id($_SESSION['id'])とpost_id($request)を使ってtweetsテーブルのretweeted_createdに挿入する
-	// ******** リツイートされたツイートが最初に作られた日時をtweetsテーブルのorigin_createdに挿入する
-	$updateCreated = $db->prepare('UPDATE tweets SET ' . $eitherDate . '_created=:created WHERE member_id=:memberId and post_id=:id');
-	$updateCreated->bindParam(':created', $dateCreated);
-	$updateCreated->bindParam(':memberId', $memberId);
-	$updateCreated->bindParam(':id', $request);
-	$updateCreated->execute(); */
-
-
-
-	/* $ret = $updateCreated->rowCount();
-	var_dump($updateCreated);
-	echo($ret);
-	exit; */
-	// /****** postsテーブルのデータのcreatedを変更
-
-/* 	$updateLikes = $db->prepare('UPDATE ' . $table . ' SET ' . $isStatus . ' = ? WHERE member_id=? and post_id = ?');
-	$updateLikes->execute(array(
-		$currentLike,
-		$_SESSION['id'],
-		$request
-	)); */
-
 	$updateLikes = $db->prepare('UPDATE ' . $table . ' SET ' . $isStatus . ' = ? WHERE member_id=? and post_id = ?');
 	$updateLikes->execute(array(
 		$currentLike,
@@ -237,7 +167,6 @@ function updateTables($request, $table, $isStatus, $countStatus) {
 			// postsのcreatedにリツイートされた日時を登録
 			updateCreatedPosts($dateCreated, $request);
 
-
 		// $addが１ではないならリツイートが取り消された
 		} else {
 
@@ -248,107 +177,31 @@ function updateTables($request, $table, $isStatus, $countStatus) {
 			));
 
 			$aryMemberId = $getMemberId->fetch();
-			//var_dump($createdPosts);
 			$memberId = $aryMemberId['member_id'];
-			/* var_dump($memberId);
-			exit; */
-
-			//$postId = $_SESSION['id'];
-			$isTweeted = true;
-			//var_dump($request);
-			//exit;
 
 			$getOrigin = $db->prepare('SELECT * FROM tweets WHERE member_id = ? AND post_id = ?');
 			$getOrigin->execute(array(
 				$memberId,
-				$request,
-				//$isTweeted
+				$request
 			));
-			/* var_dump($getOrigin);
-			exit; */
-			//$ret = $getCreated->rowCount();
-			/* var_dump($getOrigin);
-			exit; */
 			$theOrigin = $getOrigin->fetch();
-			/* print_r("<pre>");
-			print_r($theOrigin);
-			exit; */
 			$originCreated = $theOrigin['origin_created'];
-			/* var_dump($originCreated);
-			exit; */
 
 			updateCreatedPosts($originCreated, $request);
-
-
 		}
-
-
-
-		/* $memberId = (int)$_SESSION['id'];
-		// ******** tweetsテーブルのmember_id($_SESSION['id'])とpost_id($request)を使ってリツイートされた日時をtweetsテーブルのretweeted_createdに挿入する
-		// ******** リツイートされたツイートが最初に作られた日時をtweetsテーブルのorigin_createdに挿入する
-		$updateCreated = $db->prepare('UPDATE tweets SET ' . $eitherDate . '_created=:created WHERE member_id=:memberId and post_id=:id');
-		$updateCreated->bindParam(':created', $dateCreated);
-		$updateCreated->bindParam(':memberId', $memberId);
-		$updateCreated->bindParam(':id', $request);
-		$updateCreated->execute(); */
 
 		updateCountRetweet($request);
 	}
-
-
-/* 	if ($table === 'tweets') {
-		// $addが１ならリツイートされた
-		if ($add === 1) {
-			$dateCreated = date("Y-m-d H:i:s");
-			//$dateCreated = 'NOW()';
-			$eitherDate = 'retweeted';
-		// $addが１ではないならリツイートが取り消された
-		} else {
-			$getCreated = $db->prepare('SELECT created FROM posts WHERE id = ?');
-			$getCreated->execute(array(
-				$request
-			));
-			//$ret = $getCreated->rowCount();
-			$created = $getCreated->fetch();
-			//var_dump($created['created']);
-			$dateCreated = $created['created'];
-			$eitherDate = 'origin';
-		}
-
-		$memberId = (int)$_SESSION['id'];
-		// ******** tweetsテーブルのmember_id($_SESSION['id'])とpost_id($request)を使ってリツイートされた日時をtweetsテーブルのretweeted_createdに挿入する
-		// ******** リツイートされたツイートが最初に作られた日時をtweetsテーブルのorigin_createdに挿入する
-		$updateCreated = $db->prepare('UPDATE tweets SET ' . $eitherDate . '_created=:created WHERE member_id=:memberId and post_id=:id');
-		$updateCreated->bindParam(':created', $dateCreated);
-		$updateCreated->bindParam(':memberId', $memberId);
-		$updateCreated->bindParam(':id', $request);
-		$updateCreated->execute();
-
-		updateCountRetweet($request);
-	} */
 
 	header('Location: index.php'); exit();
 }
 
 function updateCreatedPosts($dateCreated, $request) {
 	global $db;
-	//$memberId = (int)$_SESSION['id'];
-	//$updateCreated = $db->prepare('UPDATE posts SET created=:created WHERE member_id=:memberId and id=:id');
 	$updateCreated = $db->prepare('UPDATE posts SET created=:created WHERE id=:id');
 	$updateCreated->bindParam(':created', $dateCreated);
-	//$updateCreated->bindParam(':memberId', $memberId);
 	$updateCreated->bindParam(':id', $request);
 	$updateCreated->execute();
-
-/* 	var_dump($dateCreated);
-	var_dump($memberId);
-	var_dump($request);
-	$ret = $updateCreated->rowCount();
-	var_dump($updateCreated);
-	echo($ret);
-	exit; */
-
 }
 
 // /*** いいねとリツイートの更新 *******
@@ -364,8 +217,6 @@ function updateDates($eitherDate, $dateCreated, $request) {
 	$updateCreated->execute();
 
 }
-
-
 
 function updateCountRetweet($id) {
 	global $db;
