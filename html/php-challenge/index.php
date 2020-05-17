@@ -103,7 +103,7 @@ if (isset($_REQUEST['like'])) {
 // /**** いいねボタン ******
 
 
-// *** いいねとリツイートの更新 *******
+// *** いいねとリツイートのオン/オフの切り替え・更新 *******
 function updateTables($request, $table, $isStatus, $countStatus) {
 	global $db;
 	
@@ -126,11 +126,82 @@ function updateTables($request, $table, $isStatus, $countStatus) {
 	$add = ($allLikes[''.$isStatus.''] === '0' ? $add : (- ($add)));
 	$currentLike = ($allLikes[''.$isStatus.''] === '0' ? true : false);
 
+	// いいねとリツイートのカウントを増減
 	$update = $db->prepare('UPDATE posts SET ' . $countStatus . ' = ' . $countStatus . ' + ? WHERE id = ?');
 	$update->execute(array(
 		$add,
 		$request
 	));
+
+	// 消す /////////////
+	//$add = 1;/////////////////
+
+	// ******* tweetテーブルのデータの xxxxx_createdを変更
+	// $addが１ならリツイートされた
+	// $addが１ではないならリツイートが取り消された
+/* 	if ($add === 1) {
+		$dateCreated = date("Y-m-d H:i:s");
+		//$dateCreated = 'NOW()';
+		$eitherDate = 'retweeted';
+	} else {
+		$getCreated = $db->prepare('SELECT created FROM posts WHERE id = ?');
+		$getCreated->execute(array(
+			$request
+		));
+		//$ret = $getCreated->rowCount();
+		$created = $getCreated->fetch();
+		//var_dump($created['created']);
+		$dateCreated = $created['created'];
+		$eitherDate = 'origin';
+	} */
+
+
+
+
+
+	/* var_dump($dateCreated);
+	var_dump($eitherDate);
+	var_dump($request);
+	exit; */
+
+	/* $updateCreated = $db->prepare('UPDATE posts SET created = ' . $dateCreated . ' WHERE id = ?');
+	$updateCreated->execute(array(
+		$request
+	)); */
+	//print_r($updateCreated->errorInfo());
+
+/* 	$updateCreated = $db->prepare('UPDATE posts SET created=:created WHERE id=:id');
+	$updateCreated->bindParam(':created', $dateCreated);
+	$updateCreated->bindParam(':id', $request);
+	$updateCreated->execute(); */
+	
+	/* var_dump((int)$_SESSION['id']);
+	exit; */
+
+
+/* 	$memberId = (int)$_SESSION['id'];
+	// ******** tweetsテーブルのmember_id($_SESSION['id'])とpost_id($request)を使ってtweetsテーブルのretweeted_createdに挿入する
+	// ******** リツイートされたツイートが最初に作られた日時をtweetsテーブルのorigin_createdに挿入する
+	$updateCreated = $db->prepare('UPDATE tweets SET ' . $eitherDate . '_created=:created WHERE member_id=:memberId and post_id=:id');
+	$updateCreated->bindParam(':created', $dateCreated);
+	$updateCreated->bindParam(':memberId', $memberId);
+	$updateCreated->bindParam(':id', $request);
+	$updateCreated->execute(); */
+
+
+
+	/* $ret = $updateCreated->rowCount();
+	var_dump($updateCreated);
+	echo($ret);
+	exit; */
+	// /****** postsテーブルのデータのcreatedを変更
+
+/* 	$updateLikes = $db->prepare('UPDATE ' . $table . ' SET ' . $isStatus . ' = ? WHERE member_id=? and post_id = ?');
+	$updateLikes->execute(array(
+		$currentLike,
+		$_SESSION['id'],
+		$request
+	)); */
 
 	$updateLikes = $db->prepare('UPDATE ' . $table . ' SET ' . $isStatus . ' = ? WHERE member_id=? and post_id = ?');
 	$updateLikes->execute(array(
@@ -139,29 +210,161 @@ function updateTables($request, $table, $isStatus, $countStatus) {
 		$request
 	));
 
+	// リツイートボタンが押されたらそのリツイートの表示位置を一番上にする（postsテーブルのcreatedをリツイートされた日時に置き換える）
 	if ($table === 'tweets') {
+		// $addが１ならリツイートがオンされた
+		if ($add === 1) {
+			// tweetsテーブルにリツイートされた時間を登録する
+			$dateCreated = date("Y-m-d H:i:s");
+			//$dateCreated = 'NOW()';
+			$eitherDate = 'retweeted';
+
+			updateDates($eitherDate, $dateCreated, $request);
+
+			// tweetsテーブルにpostsのcreatedを登録する
+			$getCreatedPosts = $db->prepare('SELECT created FROM posts WHERE id = ?');
+			$getCreatedPosts->execute(array(
+				$request
+			));
+			//$ret = $getCreated->rowCount();
+			$createdPosts = $getCreatedPosts->fetch();
+			//var_dump($created['created']);
+			$dateCreatedPosts = $createdPosts['created'];
+			$eitherDate = 'origin';
+
+			updateDates($eitherDate, $dateCreatedPosts, $request);
+
+			// postsのcreatedにリツイートされた日時を登録
+			updateCreatedPosts($dateCreated, $request);
+
+
+		// $addが１ではないならリツイートが取り消された
+		} else {
+
+			// 取り消すリツイートの投稿者のmemberIdを取得
+			$getMemberId = $db->prepare('SELECT member_id FROM posts WHERE id = ?');
+			$getMemberId->execute(array(
+				$request
+			));
+
+			$aryMemberId = $getMemberId->fetch();
+			//var_dump($createdPosts);
+			$memberId = $aryMemberId['member_id'];
+			/* var_dump($memberId);
+			exit; */
+
+			//$postId = $_SESSION['id'];
+			$isTweeted = true;
+			//var_dump($request);
+			//exit;
+
+			$getOrigin = $db->prepare('SELECT * FROM tweets WHERE member_id = ? AND post_id = ?');
+			$getOrigin->execute(array(
+				$memberId,
+				$request,
+				//$isTweeted
+			));
+			/* var_dump($getOrigin);
+			exit; */
+			//$ret = $getCreated->rowCount();
+			/* var_dump($getOrigin);
+			exit; */
+			$theOrigin = $getOrigin->fetch();
+			/* print_r("<pre>");
+			print_r($theOrigin);
+			exit; */
+			$originCreated = $theOrigin['origin_created'];
+			/* var_dump($originCreated);
+			exit; */
+
+			updateCreatedPosts($originCreated, $request);
+
+
+		}
+
+
+
+		/* $memberId = (int)$_SESSION['id'];
+		// ******** tweetsテーブルのmember_id($_SESSION['id'])とpost_id($request)を使ってリツイートされた日時をtweetsテーブルのretweeted_createdに挿入する
+		// ******** リツイートされたツイートが最初に作られた日時をtweetsテーブルのorigin_createdに挿入する
+		$updateCreated = $db->prepare('UPDATE tweets SET ' . $eitherDate . '_created=:created WHERE member_id=:memberId and post_id=:id');
+		$updateCreated->bindParam(':created', $dateCreated);
+		$updateCreated->bindParam(':memberId', $memberId);
+		$updateCreated->bindParam(':id', $request);
+		$updateCreated->execute(); */
+
 		updateCountRetweet($request);
 	}
 
+
+/* 	if ($table === 'tweets') {
+		// $addが１ならリツイートされた
+		if ($add === 1) {
+			$dateCreated = date("Y-m-d H:i:s");
+			//$dateCreated = 'NOW()';
+			$eitherDate = 'retweeted';
+		// $addが１ではないならリツイートが取り消された
+		} else {
+			$getCreated = $db->prepare('SELECT created FROM posts WHERE id = ?');
+			$getCreated->execute(array(
+				$request
+			));
+			//$ret = $getCreated->rowCount();
+			$created = $getCreated->fetch();
+			//var_dump($created['created']);
+			$dateCreated = $created['created'];
+			$eitherDate = 'origin';
+		}
+
+		$memberId = (int)$_SESSION['id'];
+		// ******** tweetsテーブルのmember_id($_SESSION['id'])とpost_id($request)を使ってリツイートされた日時をtweetsテーブルのretweeted_createdに挿入する
+		// ******** リツイートされたツイートが最初に作られた日時をtweetsテーブルのorigin_createdに挿入する
+		$updateCreated = $db->prepare('UPDATE tweets SET ' . $eitherDate . '_created=:created WHERE member_id=:memberId and post_id=:id');
+		$updateCreated->bindParam(':created', $dateCreated);
+		$updateCreated->bindParam(':memberId', $memberId);
+		$updateCreated->bindParam(':id', $request);
+		$updateCreated->execute();
+
+		updateCountRetweet($request);
+	} */
+
 	header('Location: index.php'); exit();
 }
-// /*** いいねとリツイートの更新 *******
 
-
-// ****** いいねの状態を確認 ******
-function checkIsLikeStatus($postId) {
+function updateCreatedPosts($dateCreated, $request) {
 	global $db;
+	//$memberId = (int)$_SESSION['id'];
+	//$updateCreated = $db->prepare('UPDATE posts SET created=:created WHERE member_id=:memberId and id=:id');
+	$updateCreated = $db->prepare('UPDATE posts SET created=:created WHERE id=:id');
+	$updateCreated->bindParam(':created', $dateCreated);
+	//$updateCreated->bindParam(':memberId', $memberId);
+	$updateCreated->bindParam(':id', $request);
+	$updateCreated->execute();
 
-	$status = $db->prepare('SELECT * FROM likes WHERE member_id = ? and post_id = ?');
-	$status->execute(array(
-		$_SESSION['id'],
-		$postId
-	));
-	
-	$isLike = $status->fetch();
-	return $isLike;
+/* 	var_dump($dateCreated);
+	var_dump($memberId);
+	var_dump($request);
+	$ret = $updateCreated->rowCount();
+	var_dump($updateCreated);
+	echo($ret);
+	exit; */
+
 }
-// /****** いいねの状態を確認 ******
+
+// /*** いいねとリツイートの更新 *******
+function updateDates($eitherDate, $dateCreated, $request) {
+	global $db;
+	$memberId = (int)$_SESSION['id'];
+	// ******** tweetsテーブルのmember_id($_SESSION['id'])とpost_id($request)を使ってリツイートされた日時をtweetsテーブルのretweeted_createdに挿入する
+	// ******** リツイートされたツイートが最初に作られた日時をtweetsテーブルのorigin_createdに挿入する
+	$updateCreated = $db->prepare('UPDATE tweets SET ' . $eitherDate . '_created=:created WHERE member_id=:memberId and post_id=:id');
+	$updateCreated->bindParam(':created', $dateCreated);
+	$updateCreated->bindParam(':memberId', $memberId);
+	$updateCreated->bindParam(':id', $request);
+	$updateCreated->execute();
+
+}
+
 
 
 function updateCountRetweet($id) {
@@ -201,6 +404,21 @@ function updateCountRetweet($id) {
 		));
 	}
 }
+
+// ****** いいねの状態を確認 ******
+function checkIsLikeStatus($postId) {
+	global $db;
+
+	$status = $db->prepare('SELECT * FROM likes WHERE member_id = ? and post_id = ?');
+	$status->execute(array(
+		$_SESSION['id'],
+		$postId
+	));
+	
+	$isLike = $status->fetch();
+	return $isLike;
+}
+// /****** いいねの状態を確認 ******
 
 function checkIsRetweeted($postId) {
 	global $db;
