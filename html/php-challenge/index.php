@@ -144,50 +144,18 @@ function updateTables($request, $table, $isStatus, $countStatus) {
 	if ($table === 'tweets') {
 		// $addが１ならリツイートがオンされた
 		if ($add === 1) {
-			// tweetsテーブルにリツイートされた時間を登録する
-			$dateCreated = date("Y-m-d H:i:s");
-			//$dateCreated = 'NOW()';
-			$eitherDate = 'retweeted';
+			$response = $db->prepare('SELECT m.name, m.picture, p.* FROM members m, posts p WHERE m.id=p.member_id AND p.id=? ORDER BY p.created DESC');
+			$response->execute(array($request));
+		
+			$table = $response->fetch();
 
-			updateDates($eitherDate, $dateCreated, $request);
-
-			// tweetsテーブルにpostsのcreatedを登録する
-			$getCreatedPosts = $db->prepare('SELECT created FROM posts WHERE id = ?');
-			$getCreatedPosts->execute(array(
-				$request
-			));
-			//$ret = $getCreated->rowCount();
-			$createdPosts = $getCreatedPosts->fetch();
-			//var_dump($created['created']);
-			$dateCreatedPosts = $createdPosts['created'];
-			$eitherDate = 'origin';
-
-			updateDates($eitherDate, $dateCreatedPosts, $request);
-
-			// postsのcreatedにリツイートされた日時を登録
-			updateCreatedPosts($dateCreated, $request);
-
-		// $addが１ではないならリツイートが取り消された
-		} else {
-
-			// 取り消すリツイートの投稿者のmemberIdを取得
-			$getMemberId = $db->prepare('SELECT member_id FROM posts WHERE id = ?');
-			$getMemberId->execute(array(
-				$request
+			$message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, reply_post_id=?, created=NOW()');
+			$message->execute(array(
+				$_SESSION['id'],
+				$table['message'],
+				$table['reply_post_id']
 			));
 
-			$aryMemberId = $getMemberId->fetch();
-			$memberId = $aryMemberId['member_id'];
-
-			$getOrigin = $db->prepare('SELECT * FROM tweets WHERE member_id = ? AND post_id = ?');
-			$getOrigin->execute(array(
-				$memberId,
-				$request
-			));
-			$theOrigin = $getOrigin->fetch();
-			$originCreated = $theOrigin['origin_created'];
-
-			updateCreatedPosts($originCreated, $request);
 		}
 
 		updateCountRetweet($request);
