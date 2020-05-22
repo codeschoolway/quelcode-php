@@ -28,6 +28,131 @@ if (!empty($_POST)) {
 	}
 }
 
+// ****** RTボタン **********************
+// RT作成
+if (isset($_REQUEST['retweet_id'])) {
+	$getAllPosts = $db->prepare('SELECT * FROM posts WHERE id=?');
+	$getAllPosts->execute(array(
+		$_REQUEST['retweet_id']
+	));
+	$allPosts = $getAllPosts->fetch();
+
+	$rtMessage = "RT " . $allPosts['message']; 
+	$likeData = $db->prepare('INSERT INTO posts SET message=?, member_id=?, retweet_origin_id=?, created=NOW()');
+	$likeData->execute(array(
+		$rtMessage,
+		$_SESSION['id'],
+		$_REQUEST['retweet_id']
+	));
+
+	header('Location: index.php'); exit();
+}
+
+// RT削除
+if (isset($_REQUEST['delete_rt_origin_id'])) {
+	$delete = $db->prepare(('DELETE FROM posts WHERE member_id =? AND retweet_origin_id=?'));
+	$delete->execute(array(
+		$_SESSION['id'],
+		$_REQUEST['delete_rt_origin_id']
+	));
+
+	header('Location: index.php'); exit();
+}
+
+function checkIfRtOrigin($id) {
+	global $db;
+
+	$getRow = $db->prepare('SELECT * FROM posts WHERE member_id=? and retweet_origin_id=?');
+	$getRow->execute(array(
+		$_SESSION['id'],
+		$id
+	));
+	$row = $getRow->fetch();
+	if($row !== false) {
+		return true;
+	} else {
+		return false;
+	}
+}
+// ****** RTボタン ここまで *************
+
+
+// ****** likeボタン **************
+if (isset($_REQUEST['like_id'])) {
+	
+	$likeData = $db->prepare('INSERT INTO likes SET member_id=?, post_id=?');
+	$likeData->execute(array(
+		$_SESSION['id'],
+		$_REQUEST['like_id']
+	));
+
+	header('Location: index.php'); exit();
+}
+
+if (isset($_REQUEST['delete_post_id'])) {
+	$delete = $db->prepare(('DELETE FROM likes WHERE member_id =? AND post_id=?'));
+	$delete->execute(array(
+		$_SESSION['id'],
+		$_REQUEST['delete_post_id']
+	));
+
+	header('Location: index.php'); exit();
+
+}
+
+function getCountRt($id) {
+	global $db;
+
+	$getCounts = $db->prepare('SELECT COUNT(*) AS cnt FROM posts WHERE retweet_origin_id =?');
+	$getCounts->execute(array(
+		$id
+	));
+	$count = $getCounts->fetch();
+
+	return $count['cnt'];
+}
+// ***** likeボタン ここまで ********************
+
+function checkIfPostId($postId) {
+	global $db;
+
+	$getRow = $db->prepare('SELECT * FROM likes WHERE member_id=? and post_id=?');
+	$getRow->execute(array(
+		$_SESSION['id'],
+		$postId
+	));
+	$row = $getRow->fetch();
+	if($row !== false) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function checkIfRt($id) {
+	global $db;
+	$getCounts = $db->prepare('SELECT retweet_origin_id FROM posts WHERE id=?');
+	$getCounts->execute(array(
+		$id
+	));
+	$count = $getCounts->fetch();
+	if($count['retweet_origin_id'] > '0') {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function getCountLike($postId) {
+	global $db;
+	$getCounts = $db->prepare('SELECT COUNT(*) AS cnt FROM likes WHERE post_id=?');
+	$getCounts->execute(array(
+		$postId
+	));
+	$theId = $getCounts->fetch();
+	return $theId['cnt'];
+}
+
 // 投稿を取得する
 $page = $_REQUEST['page'];
 if ($page == '') {
@@ -73,8 +198,8 @@ function makeLink($value) {
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
 	<title>ひとこと掲示板</title>
-
 	<link rel="stylesheet" href="style.css" />
 </head>
 
@@ -100,12 +225,42 @@ function makeLink($value) {
       </div>
     </form>
 
-<?php
-foreach ($posts as $post):
-?>
+<?php foreach ($posts as $post): ?>
     <div class="msg">
     <img src="member_picture/<?php echo h($post['picture']); ?>" width="48" height="48" alt="<?php echo h($post['name']); ?>" />
-    <p><?php echo makeLink(h($post['message'])); ?><span class="name">（<?php echo h($post['name']); ?>）</span>[<a href="index.php?res=<?php echo h($post['id']); ?>">Re</a>]</p>
+	<p><?php echo makeLink(h($post['message'])); ?><span class="name">（<?php echo h($post['name']); ?>）</span>
+
+	<?php echo $post['id']; ?>
+
+	[<a href="index.php?res=<?php echo h($post['id']); ?>">Re</a>]
+
+	<?php 
+	if($post['retweet_origin_id'] > '0') {
+		$rt_origin_id = $post['retweet_origin_id'];
+	} else {
+		$rt_origin_id = $post['id'];
+	}
+	?>
+
+	<!-- **** Retweetボタン **** -->
+	<?php if((checkIfRtOrigin($rt_origin_id))) : ?>	
+		<a href="index.php?delete_rt_origin_id=<?php echo h($rt_origin_id); ?>" style="color: #16BF63;"><i class="fas fa-retweet"></i></a>
+	<?php else: ?>	
+		<a href="index.php?retweet_id=<?php echo h($rt_origin_id); ?>" style="color: #828181;"><i class="fas fa-retweet"></i></a>
+	<?php endif; ?>
+	<?php echo h(getCountRt($rt_origin_id)); ?>
+	<!-- **** Rtweetボタン ここまで **** -->
+	
+	<!-- **** Likeボタン **** -->
+	<?php if(checkIfPostId($rt_origin_id) ) : ?>
+		<a href="index.php?delete_post_id=<?php echo h($rt_origin_id); ?>" style="color: red"><i class="fas fa-heart"></i></a>
+	<?php else: ?>
+		<a href="index.php?like_id=<?php echo h($rt_origin_id); ?>" style="color: #828181;"><i class="fas fa-heart"></i></a>
+	<?php endif; ?>
+	<?php echo h(getCountLike($rt_origin_id)); ?>
+	<!-- **** Likeボタン ここまで **** -->
+	</p>
+
     <p class="day"><a href="view.php?id=<?php echo h($post['id']); ?>"><?php echo h($post['created']); ?></a>
 		<?php
 if ($post['reply_post_id'] > 0):
