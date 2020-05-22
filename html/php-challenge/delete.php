@@ -10,14 +10,6 @@ if (isset($_SESSION['id'])) {
 	$messages->execute(array($id));
 	$message = $messages->fetch();
 
-	// リツイートされていたら１減らす
-	if (($message['reply_post_id']) >= 1 ) {
-		$update = $db->prepare('UPDATE posts SET count_retweeted = count_retweeted - 1 WHERE id = ?');
-		$update->execute(array(
-			$message['reply_post_id']
-		));
-	}
-
 	if ($message['member_id'] == $_SESSION['id']) {
 		// 削除する
 		$del = $db->prepare('DELETE FROM posts WHERE id=?');
